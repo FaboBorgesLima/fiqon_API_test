@@ -7,11 +7,12 @@ const User = { password: "", name: "" };
 getToken({
 	User: User,
 	onReceiveToken: (token) => {
-		getPillar({
+		getPillarsInOrder({
 			token: token,
-			page: -2,
-			onReceivePillar: (pilar) => {
-				console.log(pilar);
+			from: 0,
+			to: 5,
+			onReceivePillarsInOrder: (pillar) => {
+				console.log(pillar);
 			},
 			onDeniedAccess: (msg) => {
 				console.log("getPillar DeniedAccess:", msg);
@@ -30,11 +31,88 @@ getToken({
 });
 
 /**
+ * @typedef {object} PillarT
+ * @prop {string?} data
+ * @prop {"true"|"false"} more_itens
+ * @prop {string} next_page
+ */
+
+/**
+ * @param {Object} param0
+ * @param {string} param0.token - api_token, can be obtained from getToken in onReceiveToken property
+ * @param {number} param0.from - start pagination
+ * @param {number} param0.to - end pagination
+ * @param {(pillars:PillarT[])=>any} param0.onReceivePillarsInOrder - receives pillars from pages in range,if an error occurs or access is denied the page.data will be substituted by "missing page" and page.more items will be "true"
+ * @param {((msg:string,page:number)=>any) | undefined} param0.onDeniedAccess - handle the denied access message
+ * @param {((er:Error,page:number)=>any) | undefined}param0.onError - handle errors that might occur
+ */
+function getPillarsInOrder({
+	from,
+	to,
+	token,
+	onReceivePillarsInOrder,
+	onDeniedAccess,
+	onError,
+}) {
+	const start = Math.min(from, to),
+		end = Math.max(from, to),
+		missingPillarData = "missing page",
+		neededPillars = end - start;
+
+	/**@type {PillarT[]} */
+	let pillars = [],
+		settedPillars = 0;
+
+	/**
+	 *
+	 * @param {number} index
+	 * @param {PillarT} pillar
+	 */
+	function setPillar(
+		index,
+		pillar = {
+			data: missingPillarData,
+			more_itens: "true",
+			next_page: (index + 1).toString(),
+		}
+	) {
+		pillars[index] = pillar;
+		settedPillars++;
+
+		if (settedPillars >= neededPillars) onReceivePillarsInOrder(pillars);
+	}
+
+	for (let i = start; i < end; i++) {
+		getPillar({
+			token: token,
+			page: i,
+			onReceivePillar: (pillar) => {
+				setPillar(i, pillar);
+			},
+			onDeniedAccess: (msg) => {
+				setPillar(i);
+
+				if (!onDeniedAccess) return;
+
+				onDeniedAccess(msg, i);
+			},
+			onError: (er) => {
+				setPillar(i);
+
+				if (!onError) return;
+
+				onError(er, i);
+			},
+		});
+	}
+}
+
+/**
  *
  * @param {Object} param0
  * @param {string} param0.token - api_token, can be obtained from getToken in onReceiveToken property
  * @param {number} param0.page
- * @param {(pilar:{data?:string,more_itens:"true"|"false",next_page:string})=>any} param0.onReceivePillar - receives API pillar
+ * @param {(pillar:PillarT)=>any} param0.onReceivePillar - receives API pillar
  * @param {((msg:string)=>any) | undefined} param0.onDeniedAccess - handle the denied access message
  * @param {((er:Error)=>any) | undefined}param0.onError - handle errors that might occur
  */
