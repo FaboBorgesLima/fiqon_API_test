@@ -12,7 +12,7 @@ getToken({
 			from: 0,
 			to: 5,
 			onReceivePillarsInOrder: (pillar) => {
-				console.log(pillar);
+				console.log(concatPillarsData(pillar));
 			},
 			onDeniedAccess: (msg) => {
 				console.log("getPillar DeniedAccess:", msg);
@@ -29,6 +29,19 @@ getToken({
 		console.error(er);
 	},
 });
+
+/**
+ * @param {PillarT[]} pillars
+ * @returns {string}
+ */
+function concatPillarsData(pillars) {
+	let concatData = "";
+
+	for (let i = 0; i < pillars.length; i++)
+		concatData += pillars[i].data ? pillars[i].data : "";
+
+	return concatData;
+}
 
 /**
  * @typedef {object} PillarT
@@ -60,7 +73,7 @@ function getPillarsInOrder({
 		neededPillars = end - start;
 
 	/**@type {PillarT[]} */
-	let pillars = [],
+	let pillars = new Array(end - start),
 		settedPillars = 0;
 
 	/**
@@ -76,9 +89,9 @@ function getPillarsInOrder({
 			next_page: (index + 1).toString(),
 		}
 	) {
-		pillars[index] = pillar;
+		// adding start of loop so index is aways right
+		pillars[index - start] = pillar;
 		settedPillars++;
-
 		if (settedPillars >= neededPillars) onReceivePillarsInOrder(pillars);
 	}
 
