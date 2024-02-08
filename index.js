@@ -1,17 +1,30 @@
 //@ts-check
 const https = require('https');
 const { Buffer } = require('node:buffer');
+const readline = require('readline-sync');
 
-const User = { password: '', name: '' };
+console.log('Hello, insert your name and password! \n');
+const User = {
+	name: readline.question('name:'),
+	password: readline.question('password:'),
+};
 
 getToken({
 	User: User,
 	onReceiveToken: (token) => {
+		console.log('token: ', token);
+
 		getPillarsInOrder({
 			token: token,
 			from: 0,
 			to: 5,
 			onReceivePillarsInOrder: (pillars) => {
+				console.log(
+					'pilares: ',
+					pillars.map((pillar) => {
+						return pillar.data;
+					})
+				);
 				sendPillars({
 					token: token,
 					pillars: pillars,
